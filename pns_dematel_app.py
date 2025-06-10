@@ -1,4 +1,3 @@
-
 # Pythagorean Neutrosophic DEMATEL Streamlit App
 import streamlit as st
 import pandas as pd
@@ -48,6 +47,14 @@ if uploaded_file:
 
     avg_pns = np.mean(matrices, axis=0)  # shape (n, n, 3)
 
+    # Display Average PNS Matrix
+    st.subheader("Average Rating in Pythagorean Neutrosophic Form")
+    avg_pns_df = pd.DataFrame(
+        [[f"({T:.2f}, {I:.2f}, {F:.2f})" for T, I, F in row] for row in avg_pns],
+        index=df.index, columns=df.columns
+    )
+    st.dataframe(avg_pns_df)
+
     # Deneutrosophication to get crisp matrix
     crisp_matrix = np.array([[deneutrosophication(*avg_pns[i, j][:2]) for j in range(n)] for i in range(n)])
 
@@ -83,6 +90,15 @@ if uploaded_file:
 
     st.subheader("Normalized Relation Matrix (NRM) > Threshold = 1")
     st.dataframe(pd.DataFrame(NRM, index=df.index, columns=df.columns))
+
+    # Show Directional Arrows (Cause to Effect) for NRM
+    st.subheader("Cause and Effect Directions (Arrow Map)")
+    arrow_map = []
+    for i in range(n):
+        for j in range(n):
+            if NRM[i, j] == 1:
+                arrow_map.append(f"{df.index[i]} → {df.columns[j]}")
+    st.write("\n".join(arrow_map))
 
     # Plot full cause-effect diagram
     st.subheader("Full Cause-Effect Diagram")
