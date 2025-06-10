@@ -1,6 +1,3 @@
-# Rebuild the complete and correct Streamlit app with all core logic and Figures 2–4 visualizations
-
-corrected_app_code = '''
 # Pythagorean Neutrosophic DEMATEL Streamlit App with Full Logic and Visual Outputs
 import streamlit as st
 import pandas as pd
@@ -78,6 +75,7 @@ if uploaded_file:
     nrm_df = pd.DataFrame(NRM, index=df.index, columns=df.columns)
     st.dataframe(nrm_df)
 
+    # Plot NRM as directional arrows using networkx
     G = nx.DiGraph()
     for i in range(n):
         for j in range(n):
@@ -97,11 +95,3 @@ if uploaded_file:
         ax.set_title(f"Influence of {name} on Others")
         ax.set_ylabel("Influence Strength")
         st.pyplot(fig)
-'''
-
-# Save corrected app code to file
-corrected_app_path = "/mnt/data/pns_dematel_corrected_app.py"
-with open(corrected_app_path, "w") as f:
-    f.write(corrected_app_code)
-
-corrected_app_path
