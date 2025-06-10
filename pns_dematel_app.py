@@ -1,8 +1,7 @@
-# Export the updated Streamlit app including visualizations similar to Figures 2, 3, and 4
-app_file_full_visuals = "/mnt/data/pns_dematel_full_visuals_app.py"
+# Rebuild the complete and correct Streamlit app with all core logic and Figures 2–4 visualizations
 
-app_code_full_visuals = '''
-# Pythagorean Neutrosophic DEMATEL Streamlit App with Visuals like Figures 2, 3, 4
+corrected_app_code = '''
+# Pythagorean Neutrosophic DEMATEL Streamlit App with Full Logic and Visual Outputs
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,7 +9,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 st.set_page_config(layout="wide")
-st.title("Pythagorean Neutrosophic DEMATEL with Visual Cause-Effect Mapping")
+st.title("Pythagorean Neutrosophic DEMATEL with Visual Analysis")
 
 def numeric_to_pns(val):
     mapping = {
@@ -74,13 +73,11 @@ if uploaded_file:
     st.dataframe(result_df.sort_values("R+C", ascending=False))
 
     st.subheader("Figure 3: Overall Network Relation Map (NRM)")
-
     threshold = np.mean(T)
     NRM = (T > threshold).astype(int)
     nrm_df = pd.DataFrame(NRM, index=df.index, columns=df.columns)
     st.dataframe(nrm_df)
 
-    # Plot NRM arrows (Figure 3)
     G = nx.DiGraph()
     for i in range(n):
         for j in range(n):
@@ -92,7 +89,6 @@ if uploaded_file:
     st.pyplot(fig3)
 
     st.subheader("Figure 4: Individual Influence Maps")
-
     for i, name in enumerate(df.index):
         fig, ax = plt.subplots()
         influenced = [df.columns[j] for j in range(n) if NRM[i, j] == 1]
@@ -103,7 +99,9 @@ if uploaded_file:
         st.pyplot(fig)
 '''
 
-with open(app_file_full_visuals, "w") as f:
-    f.write(app_code_full_visuals)
+# Save corrected app code to file
+corrected_app_path = "/mnt/data/pns_dematel_corrected_app.py"
+with open(corrected_app_path, "w") as f:
+    f.write(corrected_app_code)
 
-app_file_full_visuals
+corrected_app_path
