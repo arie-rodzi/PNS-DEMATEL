@@ -1,15 +1,17 @@
-# Pythagorean Neutrosophic DEMATEL Streamlit App
+# Export the updated Streamlit app including visualizations similar to Figures 2, 3, and 4
+app_file_full_visuals = "/mnt/data/pns_dematel_full_visuals_app.py"
+
+app_code_full_visuals = '''
+# Pythagorean Neutrosophic DEMATEL Streamlit App with Visuals like Figures 2, 3, 4
 import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import networkx as nx
 
 st.set_page_config(layout="wide")
-st.title("Pythagorean Neutrosophic DEMATEL App")
+st.title("Pythagorean Neutrosophic DEMATEL with Visual Cause-Effect Mapping")
 
-# ----------------------------
-# Utility Functions
-# ----------------------------
 def numeric_to_pns(val):
     mapping = {
         1: (0.10, 0.80, 0.90),
@@ -25,15 +27,12 @@ def numeric_to_pns(val):
 def deneutrosophication(T, I):
     return (T + 0.5 * I) / 1.5
 
-# ----------------------------
-# File Upload
-# ----------------------------
-uploaded_file = st.file_uploader("Upload Excel File (.xlsx) with Each Expert as a Sheet", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload Excel File (.xlsx) with each expert on a separate sheet", type=["xlsx"])
 
 if uploaded_file:
     xls = pd.ExcelFile(uploaded_file)
     sheets = xls.sheet_names
-    st.write(f"Detected expert sheets: {sheets}")
+    st.write("Detected expert sheets:", sheets)
 
     matrices = []
     for sheet in sheets:
@@ -45,76 +44,66 @@ if uploaded_file:
                 pns_matrix[i, j] = numeric_to_pns(df.iloc[i, j])
         matrices.append(pns_matrix)
 
-    avg_pns = np.mean(matrices, axis=0)  # shape (n, n, 3)
+    avg_pns = np.mean(matrices, axis=0)
 
-    # Display Average PNS Matrix
-    st.subheader("Average Rating in Pythagorean Neutrosophic Form")
-    avg_pns_df = pd.DataFrame(
-        [[f"({T:.2f}, {I:.2f}, {F:.2f})" for T, I, F in row] for row in avg_pns],
-        index=df.index, columns=df.columns
-    )
-    st.dataframe(avg_pns_df)
+    st.subheader("Average Rating in Pythagorean Neutrosophic Form (T, I, F)")
+    pns_df = pd.DataFrame([[f"({T:.2f}, {I:.2f}, {F:.2f})" for T, I, F in row] for row in avg_pns],
+                          index=df.index, columns=df.columns)
+    st.dataframe(pns_df)
 
-    # Deneutrosophication to get crisp matrix
     crisp_matrix = np.array([[deneutrosophication(*avg_pns[i, j][:2]) for j in range(n)] for i in range(n)])
-
-    # Normalize
     max_val = np.max(np.sum(crisp_matrix, axis=1))
     norm_matrix = crisp_matrix / max_val
-
-    # Total relation matrix: T = Z(I - Z)^-1
     I = np.identity(n)
     T = norm_matrix @ np.linalg.inv(I - norm_matrix)
 
-    R = np.sum(T, axis=1)  # sum of rows
-    C = np.sum(T, axis=0)  # sum of columns
-
-    cause_effect = R - C
-    prominence = R + C
+    R = np.sum(T, axis=1)
+    C = np.sum(T, axis=0)
+    RC = R + C
+    RmC = R - C
 
     result_df = pd.DataFrame({
         "Criteria": df.index,
-        "R": R,
-        "C": C,
-        "R+C": prominence,
-        "R-C": cause_effect,
-        "Type": ["Cause" if val > 0 else "Effect" for val in cause_effect]
+        "R": R, "C": C,
+        "R+C": RC,
+        "R-C": RmC,
+        "Type": ["Cause" if x > 0 else "Effect" for x in RmC]
     })
 
-    st.subheader("Ranking Result")
+    st.subheader("Figure 2: Ranking of Criteria by R+C and R−C")
     st.dataframe(result_df.sort_values("R+C", ascending=False))
 
-    # NRM thresholding
+    st.subheader("Figure 3: Overall Network Relation Map (NRM)")
+
     threshold = np.mean(T)
     NRM = (T > threshold).astype(int)
+    nrm_df = pd.DataFrame(NRM, index=df.index, columns=df.columns)
+    st.dataframe(nrm_df)
 
-    st.subheader("Normalized Relation Matrix (NRM) > Threshold = 1")
-    st.dataframe(pd.DataFrame(NRM, index=df.index, columns=df.columns))
-
-    # Show Directional Arrows (Cause to Effect) for NRM
-    st.subheader("Cause and Effect Directions (Arrow Map)")
-    arrow_map = []
+    # Plot NRM arrows (Figure 3)
+    G = nx.DiGraph()
     for i in range(n):
         for j in range(n):
             if NRM[i, j] == 1:
-                arrow_map.append(f"{df.index[i]} → {df.columns[j]}")
-    st.write("\n".join(arrow_map))
+                G.add_edge(df.index[i], df.columns[j])
+    fig3, ax3 = plt.subplots(figsize=(8, 6))
+    pos = nx.spring_layout(G, seed=42)
+    nx.draw(G, pos, with_labels=True, node_size=1500, node_color='lightblue', arrows=True, ax=ax3)
+    st.pyplot(fig3)
 
-    # Plot full cause-effect diagram
-    st.subheader("Full Cause-Effect Diagram")
-    fig, ax = plt.subplots()
-    ax.scatter(cause_effect, prominence)
-    for i, name in enumerate(df.index):
-        ax.text(cause_effect[i], prominence[i], name)
-    ax.set_xlabel("R - C (Cause-Effect)")
-    ax.set_ylabel("R + C (Prominence)")
-    ax.grid(True)
-    st.pyplot(fig)
+    st.subheader("Figure 4: Individual Influence Maps")
 
-    # Individual plots for each criterion
-    st.subheader("Individual Criterion Influence")
     for i, name in enumerate(df.index):
         fig, ax = plt.subplots()
-        ax.bar(range(n), T[i], tick_label=df.columns)
+        influenced = [df.columns[j] for j in range(n) if NRM[i, j] == 1]
+        scores = [T[i, j] for j in range(n) if NRM[i, j] == 1]
+        ax.bar(influenced, scores)
         ax.set_title(f"Influence of {name} on Others")
+        ax.set_ylabel("Influence Strength")
         st.pyplot(fig)
+'''
+
+with open(app_file_full_visuals, "w") as f:
+    f.write(app_code_full_visuals)
+
+app_file_full_visuals
